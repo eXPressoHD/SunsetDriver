@@ -15,16 +15,24 @@ public class LaneManager : MonoBehaviour
     [SerializeField]
     private Dictionary<int, GameObject> _lanes;
 
+   [SerializeField]
+   private int lanes;
+
     private void Start()
     {
         _player = GameObject.FindGameObjectWithTag("Player");
         _lanes = new Dictionary<int, GameObject>();
         _lanes = FetchAllLanes(); //Get all lanes 
-        _laneIndex = 1; //starts at zero!           
+        _laneIndex = 0; //starts at zero!           
         _currentLane = _lanes[_laneIndex]; //Get current lane with startIndex
     }
 
-    public void ChangeLane(GameObject objectToMove, ELaneDirection laneDirection)
+   private void Update()
+   {
+      _lanes = FetchAllLanes();
+   }
+
+   public void ChangeLane(GameObject objectToMove, ELaneDirection laneDirection)
     {
         var checkTuple = CheckForBesideLane(laneDirection);
 
@@ -41,7 +49,7 @@ public class LaneManager : MonoBehaviour
         var currentPosOfMoveableObject = objectToMove.transform.position;
         var newLanePosition = newLane.transform.position;
 
-        StartCoroutine(MoveFromTo(objectToMove.transform, currentPosOfMoveableObject, newLanePosition, 15f));
+        StartCoroutine(MoveFromTo(objectToMove.transform, currentPosOfMoveableObject, newLanePosition, 40f));
 
         if (laneDirection == ELaneDirection.Right)
         {
@@ -53,20 +61,23 @@ public class LaneManager : MonoBehaviour
         }
     }
 
-    IEnumerator MoveFromTo(Transform objectToMove, Vector3 a, Vector3 b, float speed)
-    {
-        float step = (speed / (a - b).magnitude) * Time.fixedDeltaTime;
-        float t = 0;
-        while (t <= 1.0f)
-        {
-            t += step; // Goes from 0 to 1, incrementing by step each time
-            objectToMove.position = Vector3.Lerp(a, b, t); // Move objectToMove closer to b
-            yield return new WaitForFixedUpdate();         // Leave the routine and return here in the next frame
-        }
-        objectToMove.position = b;
-    }
+   IEnumerator MoveFromTo(Transform objectToMove, Vector3 a, Vector3 b, float speed)
+   {
+      float step = (speed / (a - b).magnitude) * Time.fixedDeltaTime;
+      float t = 0;
+      while (t <= 1.0f)
+      {
+         t += step;
 
-    private (bool laneExists, GameObject nextLaneToMove) CheckForBesideLane(ELaneDirection laneDirection)
+         Vector3 newPosition = new Vector3(objectToMove.position.x, objectToMove.position.y, Mathf.Lerp(a.z, b.z, t));
+
+         objectToMove.position = newPosition; 
+         yield return new WaitForFixedUpdate();
+      }
+      objectToMove.position = new Vector3(objectToMove.position.x, objectToMove.position.y, b.z); 
+   }
+
+   private (bool laneExists, GameObject nextLaneToMove) CheckForBesideLane(ELaneDirection laneDirection)
     {
         int localLaneIndex = _laneIndex;
 
@@ -98,18 +109,23 @@ public class LaneManager : MonoBehaviour
         return (false, null);
     }
 
-    private Dictionary<int, GameObject> FetchAllLanes()
-    {
-        var dic = new Dictionary<int, GameObject>();
-        var lanes = GameObject.FindGameObjectsWithTag("Lane");
+   private Dictionary<int, GameObject> FetchAllLanes()
+   {
+      var dic = new Dictionary<int, GameObject>();
+      var lanes = GameObject.FindGameObjectsWithTag("Lane");
 
-        int counter = 0;
-        foreach (GameObject lane in lanes.OrderBy(key => key.name))
-        {
-            dic.Add(counter, lane);
-            counter++;
-        }
+      if (lanes.Length > 4)
+      {
+         lanes = lanes.Skip(4).Take(4).ToArray();
+      }
 
-        return dic;
-    }
+      int counter = 0;
+      foreach (GameObject lane in lanes.OrderBy(key => key.name))
+      {
+         dic.Add(counter, lane);
+         counter++;
+      }
+
+      return dic;
+   }
 }

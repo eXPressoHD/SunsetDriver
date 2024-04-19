@@ -29,6 +29,8 @@ public class MapManager : MonoBehaviour
     private GameObject[] _map;
     [SerializeField]
     private List<GameObject> _mapDecoration;
+   [SerializeField]
+   private GameObject _enemyCar;
 
     private void Start()
     {
@@ -45,8 +47,10 @@ public class MapManager : MonoBehaviour
     public void SpawnNewRoadSnippet()
     {
         var newObj = CreateNewGameObjectTile();
-        
-        _snipCount++;
+
+      SpawnCarsOnLanes(newObj.Item3.transform);
+
+      _snipCount++;
         _map[_snipCount] = (newObj.Item3);
         
         if (_snipCount == 2)
@@ -69,8 +73,48 @@ public class MapManager : MonoBehaviour
         return (pos, rotation, newObj);
     }
 
+   private void SpawnCarsOnLanes(Transform newSnippetTransform)
+   {
+      int numLanes = 0;
+      for (int i = 0; i < newSnippetTransform.childCount; i++)
+      {
+         if (newSnippetTransform.GetChild(i).CompareTag("Lane"))
+         {
+            numLanes++;
+         }
+      }
 
-    private void MoveMap()
+      float[] laneProbabilities = new float[numLanes];
+      for (int i = 0; i < laneProbabilities.Length; i++)
+      {
+         laneProbabilities[i] = 1.0f / numLanes; 
+      }
+
+      List<Transform> shuffledLanes = new List<Transform>();
+      for (int i = 0; i < newSnippetTransform.childCount; i++)
+      {
+         Transform laneTransform = newSnippetTransform.GetChild(i);
+         if (laneTransform.CompareTag("Lane"))
+         {
+            shuffledLanes.Add(laneTransform);
+         }
+      }
+      shuffledLanes.Shuffle();
+
+      foreach (Transform laneTransform in shuffledLanes)
+      {
+         int laneIndex = shuffledLanes.IndexOf(laneTransform);
+
+         if (UnityEngine.Random.value < laneProbabilities[laneIndex])
+         {
+            GameObject car = Instantiate(_enemyCar, laneTransform.position, Quaternion.Euler(0, 90, 0));
+            car.transform.parent = newSnippetTransform;
+         }
+      }
+   }
+
+
+   private void MoveMap()
     {
         foreach (GameObject mapItem in _map)
         {
@@ -80,4 +124,22 @@ public class MapManager : MonoBehaviour
             }
         }
     }
+}
+
+public static class ListExtensions
+{
+   private static System.Random rng = new System.Random();
+
+   public static void Shuffle<T>(this IList<T> list)
+   {
+      int n = list.Count;
+      while (n > 1)
+      {
+         n--;
+         int k = rng.Next(n + 1);
+         T value = list[k];
+         list[k] = list[n];
+         list[n] = value;
+      }
+   }
 }
